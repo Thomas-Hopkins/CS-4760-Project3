@@ -3,16 +3,17 @@ CFLAGS = -Wall -g
 
 LIBS = log
 
-OUT = runsim
+EXE = runsim testsim
+OBJS = license.o
 
-CLEAN = $(OUT) *.o
+CLEAN = $(EXE) *.o $(OBJS)
 
-all: $(OUT)
+all: $(EXE)
 
-$(OUT): $(OUT).o
-	$(CC) $(CFLAGS) -o $@ $<
+%sim: %sim.o $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^ -Llib -l$(LIBS)
 
-%.o: %.c
+%.o: %.c %.h
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 .PHONY: clean
