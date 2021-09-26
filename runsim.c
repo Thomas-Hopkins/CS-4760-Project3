@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <string.h>
+#include <limits.h>
 #include <unistd.h>
 
 void help() {
@@ -9,6 +11,13 @@ void help() {
 	printf("[n]\tNumber of processes to run.\n");
 	printf("[-h]\tShow this help dialogue.\n");
 	printf("\n");
+}
+
+int docommand(char* command) {
+	char* program = strtok(command, " ");
+	char* cmd1 = strtok(NULL, " ");
+	char* cmd2 = strtok(NULL, " ");
+	return execl(program, cmd1, cmd2, NULL);
 }
 
 int main(int argc, char** argv) {
@@ -56,7 +65,30 @@ int main(int argc, char** argv) {
 			return EXIT_FAILURE;
 		}
 	} while (optind < argc);
+
+	char input_buffer[MAX_CANON]; // Setup a buffer to read in text
 	
-	// TODO: implement licensing
-	printf("arg: %d\n", num_apps);
+	// Read in MAX_CANON chars into buffer until end
+	while (fgets(input_buffer, MAX_CANON, stdin) != NULL) {
+		// Get new size (in characters) of the string
+		size_t input_size = strlen(input_buffer) + 1;
+		// Allocate memory for this string
+		char* input_text = malloc(input_size * sizeof(char));
+		if (input_text == NULL) {
+			fprintf(stderr, "%s: ", exe_name);
+			perror("Failed to allocate memory for input");
+			return EXIT_FAILURE;
+		}
+		
+		// Copy buffer characters to string	
+		strncpy(input_text, input_buffer, input_size);
+		// Fork a child and have child run docommand
+		if (fork() == 0) {
+			if (docommand(input_text) == -1) {
+				fprintf(stderr, "%s: ", exe_name);
+				perror("Failed to execute child process");
+			}
+		}
+	}
+	
 }
