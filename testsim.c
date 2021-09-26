@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <errno.h>
 
+#include "license.h"
+
 void help () {
 	printf("testsim help\n");
 }

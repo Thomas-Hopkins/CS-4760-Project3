@@ -4,14 +4,15 @@ CFLAGS = -Wall -g
 LIBS = log
 
 EXE = runsim testsim
-OBJS = license.o license.h config.h
+DEPS = license.h config.h
+OBJS = license.o
 
 CLEAN = $(EXE) *.o $(OBJS)
 
 all: $(EXE)
 
-%sim: %sim.o $(OBJS) 
-	$(CC) $(CFLAGS) -o $@ $< -Llib -l$(LIBS)
+%sim: %sim.o $(OBJS) $(DEPS)
+	$(CC) $(CFLAGS) -o $@ $< $(OBJS) -Llib -l$(LIBS)
 
 %.o: %.c %.h
 	$(CC) $(CFLAGS) -o $@ -c $<

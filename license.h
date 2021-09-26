@@ -10,7 +10,6 @@ int removelicenses(int n); // decrement licenses by n
 void logmsg(const char* msg); // log message to logfile
 
 // public member attributes
-char* logfile;
 int nlicenses; 
 
 #endif

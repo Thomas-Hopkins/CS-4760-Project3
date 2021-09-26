@@ -36,7 +36,7 @@ void signal_handler(int signum) {
 
 	// Kill all children processes back to front
 	while (num_children > 0) {		
-		while (kill(children[num_children - 1], SIGTERM) != 0) {
+		while (kill(children[num_children - 1], SIGKILL) != 0) {
 			waitpid(-1, NULL, WNOHANG);
 		} 
 		children[num_children--] = 0;
@@ -53,6 +53,7 @@ int docommand(char* command) {
 	char* program = strtok(command, " ");
 	char* cmd1 = strtok(NULL, " ");
 	char* cmd2 = strtok(NULL, " ");
+	printf("./%s %s %s %s\n", program, program, cmd1, cmd2);
 	return execl(program, program, cmd1, cmd2, NULL);
 }
 
@@ -116,8 +117,27 @@ int main(int argc, char** argv) {
 
 	char input_buffer[MAX_CANON]; // Setup a buffer to read in text
 	
-	// Read in MAX_CANON chars into buffer until end
+	// MAIN LOOP
+	// Read in max characters per line into buffer then execute their command
 	while (fgets(input_buffer, MAX_CANON, stdin) != NULL) {
+		// process id holder
+		pid_t pid;
+
+		// If running max processes wait until one finishes
+		if (num_children >= num_apps) {
+			// Wait for a child to finish then start another for a new command
+			pid = wait(NULL);
+			// Remove pid from children list (slow linear search - but small list so inconsequential)
+			for (int i = 0; i < num_children; i++) {
+				if (children[i] == pid) {
+					// If match, replace pid with last pid and decrement list
+					children[i] = children[--num_children];
+					children[num_children] = 0;
+					break;
+				}
+			}
+		}
+
 		// Get new size (in characters) of the string
 		size_t input_size = strlen(input_buffer) + 1;
 		// Allocate memory for this string
@@ -132,7 +152,6 @@ int main(int argc, char** argv) {
 		strncpy(input_text, input_buffer, input_size);
 	
 		// Fork children and have children run docommand
-		pid_t pid;
 		if (num_children < num_apps) {
 			pid = fork();
 			if (pid == 0) {
@@ -146,6 +165,7 @@ int main(int argc, char** argv) {
 			else {
 				// We are parent, append this pid to children
 				children[num_children++] = pid;
+				free(input_text);
 			}
 		}
 	}
