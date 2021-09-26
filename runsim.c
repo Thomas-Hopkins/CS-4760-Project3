@@ -3,21 +3,57 @@
 #include <errno.h>
 #include <string.h>
 #include <limits.h>
+#include <signal.h>
 #include <unistd.h>
+#include <wait.h>
+
+#include "config.h"
+#include "license.h"
+
+static int num_children;
+static pid_t children[MAX_PROCESSES]; 
 
 void help() {
 	printf("Runsim help.\n");
 	printf("\n");
-	printf("[n]\tNumber of processes to run.\n");
+	printf("n\tNumber of processes to run. (Required)\n");
 	printf("[-h]\tShow this help dialogue.\n");
 	printf("\n");
 }
 
+void cleanup() {
+	return;
+}
+
+void signal_handler(int signum) {
+	// Issue messages	
+	if (signum == SIGINT) {
+		fprintf(stderr, "Recieved SIGINT signal interrupt, terminating children.\n");
+	}
+	else if (signum == SIGALRM) {
+		fprintf(stderr, "Process execution timeout. Failed to finish in %d seconds.\n", MAX_TIMEOUT);
+	}
+
+	// Kill all children processes back to front
+	while (num_children > 0) {		
+		while (kill(children[num_children - 1], SIGTERM) != 0) {
+			waitpid(-1, NULL, WNOHANG);
+		} 
+		children[num_children--] = 0;
+	}
+
+	//TODO: Cleanup memory
+	if (signum == SIGINT) exit(EXIT_SUCCESS);
+	if (signum == SIGALRM) exit(EXIT_FAILURE);
+}
+
+// Issue a execl call
 int docommand(char* command) {
+	// TODO: getlicense 
 	char* program = strtok(command, " ");
 	char* cmd1 = strtok(NULL, " ");
 	char* cmd2 = strtok(NULL, " ");
-	return execl(program, cmd1, cmd2, NULL);
+	return execl(program, program, cmd1, cmd2, NULL);
 }
 
 int main(int argc, char** argv) {
@@ -30,10 +66,10 @@ int main(int argc, char** argv) {
 		switch(option) {
 			case 'h':
 				help();
-				return EXIT_SUCCESS;
+				exit(EXIT_SUCCESS);
 			case '?':
 				// Let getopt handle error msg
-				return EXIT_FAILURE;
+				exit(EXIT_FAILURE);
 		}
 	}
 	
@@ -44,17 +80,23 @@ int main(int argc, char** argv) {
 			errno = EINVAL;
 			fprintf(stderr, "%s: ", exe_name);
 			perror("Did not get number of processes as arg");
-			return EXIT_FAILURE;
+			exit(EXIT_FAILURE);
 		}
 		
 		num_apps = atoi(argv[optind++]);
+		if (num_apps > MAX_PROCESSES) {
+			errno= EINVAL;
+			fprintf(stderr, "%s: ", exe_name);
+			perror("Too many processes requested. Falling back to max.");
+			num_apps = MAX_PROCESSES;
+		}
 		
 		// error if got more than one option
 		if (optind < argc) {
 			errno = EINVAL;
 			fprintf(stderr, "%s: ", exe_name);
 			perror("Unkown option");
-			return EXIT_FAILURE;
+			exit(EXIT_FAILURE);
 		}
 		
 		// error if got invalid num_apps
@@ -62,9 +104,15 @@ int main(int argc, char** argv) {
 			errno = EINVAL;
 			fprintf(stderr, "%s: ", exe_name);
 			perror("Passed invalid integer for number of processes");
-			return EXIT_FAILURE;
+			exit(EXIT_FAILURE);
 		}
 	} while (optind < argc);
+	
+	//TODO: initlicense
+
+	// Setup signal handlers
+	signal(SIGINT, signal_handler);
+	signal(SIGALRM, signal_handler);
 
 	char input_buffer[MAX_CANON]; // Setup a buffer to read in text
 	
@@ -77,18 +125,33 @@ int main(int argc, char** argv) {
 		if (input_text == NULL) {
 			fprintf(stderr, "%s: ", exe_name);
 			perror("Failed to allocate memory for input");
-			return EXIT_FAILURE;
+			exit(EXIT_FAILURE);
 		}
 		
 		// Copy buffer characters to string	
 		strncpy(input_text, input_buffer, input_size);
-		// Fork a child and have child run docommand
-		if (fork() == 0) {
-			if (docommand(input_text) == -1) {
-				fprintf(stderr, "%s: ", exe_name);
-				perror("Failed to execute child process");
+	
+		// Fork children and have children run docommand
+		pid_t pid;
+		if (num_children < num_apps) {
+			pid = fork();
+			if (pid == 0) {
+				// We are a child, execute command
+				if (docommand(input_text) == -1) {
+					fprintf(stderr, "%s: ", exe_name);
+					perror("Failed to execute child process");
+					exit(EXIT_FAILURE);
+				}
+			}
+			else {
+				// We are parent, append this pid to children
+				children[num_children++] = pid;
 			}
 		}
 	}
-	
+	// Terminate if children do not finish in timeout time	
+	alarm(MAX_TIMEOUT);
+
+	// TODO: Remove shared memory
+
 }
