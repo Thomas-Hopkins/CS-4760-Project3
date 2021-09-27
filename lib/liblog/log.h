@@ -15,6 +15,7 @@ typedef struct list_struct {
 
 extern const char msg_types[];
 extern const char fatal_types[];
+extern const char non_type;
 extern const int fataltypes_size;
 extern const int msgtypes_size;
 extern list_log* headptr;

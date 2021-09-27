@@ -49,6 +49,7 @@ int main(int argc, char** argv) {
 	for (int i = 1; i <= repeat; i++) {
 		sleep(sleep_t);
 		//TODO: Call logmsg 
-		printf("TIME\t%d\tIteration %d of %d\n", getpid(), i, repeat);
+		logmsg("Logmsg");
+		//printf("TIME\t%d\tIteration %d of %d\n", getpid(), i, repeat);
 	}
 }
