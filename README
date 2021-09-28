@@ -1,0 +1,51 @@
+|----    README PROJECT 2    -----|
+|---- AUTHOR: Thomas Hopkins -----|
+|----  UMSL CMPSCI-4760-002  -----|
+
+|- COMPILING -|
+The provided Makefile will build the required libraries,
+    as well as it will build the two executables "runsim"
+    and "testsim".
+Simply run "make" and the "driver" executables will be 
+	outputted. See the USAGE section below to see how to
+    run the programs.
+A cleaning function is provided. run "make clean" to clean up
+	the directory and leave only src behind.
+Make will also output the liblog.a static archive into the
+    libs directory. This is used for the logging functionality
+    and is a slightly modified version of project 1.
+
+
+|- USAGE -|
+The executables use shared memory between them to simulate
+    a licensing system. 
+
+The runsim executable takes 1 required argument:
+[n] Specifies the number of subprocesses you wish to simulate
+    at one time.
+-h Shows a help menu.
+
+You should also provide a file with commands listed line by line 
+    as standard in to runsim.
+    This should look like the following:
+
+    testsim # #
+    where the first # is sleep time inbetween logging outputs and
+    the second # is the number of times it will send a message to 
+    the log.
+
+The testsim excutable is run by runsim. It takes 2 required arguments:
+[time] Specifies time in seconds between messages logged to file.
+[n] Specifies number of times a message will be logged.
+-h Shows a help menu.
+
+
+|- FUNCTIONALITY -|
+The runsim executable will spawn multiple children of testsim each one
+    using a license. If the licenses run out we will wait until a child
+    exits and returns the license. 
+
+
+|- KNOWN ISSUES/LIMITATIONS -|
+The program is missing implementation of the Bakery Algorithm to sync
+    processes.

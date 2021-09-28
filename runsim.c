@@ -55,14 +55,15 @@ void signal_handler(int signum) {
 		children[num_children--] = 0;
 	}
 
-	//TODO: Cleanup memory
+	// Cleanup license object (remove shared memory)
+	destlicense();
+
 	if (signum == SIGINT) exit(EXIT_SUCCESS);
 	if (signum == SIGALRM) exit(EXIT_FAILURE);
 }
 
 // Issue a execl call
 int docommand(char* command) {
-	// TODO: getlicense 
 	char* program = strtok(command, " ");
 	char* cmd1 = strtok(NULL, " ");
 	char* cmd2 = strtok(NULL, " ");
