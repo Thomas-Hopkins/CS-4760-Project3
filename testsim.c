@@ -1,9 +1,11 @@
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include <stdio.h>
 #include <errno.h>
 
 #include "license.h"
+#include "utils.h"
 
 void help () {
 	printf("testsim help\n");
@@ -27,29 +29,27 @@ int main(int argc, char** argv) {
 	// Handle non-flag args
 	if (argc - optind < 2) {
 		errno = EINVAL;
-		fprintf(stderr, "%s: ", exe_name);
-		perror("Not enough arguments. See -h for help.");
-		return EXIT_FAILURE;
+		outputerror(exe_name, "Not enough arguments. See -h for help", EXIT_FAILURE);
 	} 
 	int sleep_t = atoi(argv[optind++]);
 	int repeat = atoi(argv[optind++]);
 	if (sleep_t == 0 || repeat == 0) {
 		errno = EINVAL;
-		fprintf(stderr, "%s: ", exe_name);
-		perror("Invalid arguments. See -h for help.");
-		return EXIT_FAILURE;
+		outputerror(exe_name, "Invalid arguments. See -h for help", EXIT_FAILURE);
 	}
 	if (optind < argc) {
 		errno = EINVAL;
-		fprintf(stderr, "%s: ", exe_name);
-		perror("Too many arguments. See -h for help.");	
+		outputerror(exe_name, "Too many arguments. See -h for help", EXIT_FAILURE);
 	}
 	
+	attachsharedmem();
+
 	// Main loop
 	for (int i = 1; i <= repeat; i++) {
 		sleep(sleep_t);
-		//TODO: Call logmsg 
-		logmsg("Logmsg");
-		//printf("TIME\t%d\tIteration %d of %d\n", getpid(), i, repeat);
+		// Format a message to log and log it
+		char message[100];
+		sprintf(message, "%d\t\tIteration %d of %d",  getpid(), i, repeat);
+		logmsg(message);
 	}
 }

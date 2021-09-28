@@ -9,6 +9,7 @@
 
 #include "license.h"
 #include "config.h"
+#include "utils.h"
 
 static int num_children;
 static pid_t children[MAX_PROCESSES]; 
@@ -49,9 +50,8 @@ void signal_handler(int signum) {
 
 	// Kill all children processes back to front
 	while (num_children > 0) {		
-		while (kill(children[num_children - 1], SIGKILL) != 0) {
-			waitpid(-1, NULL, WNOHANG);
-		} 
+		kill(children[num_children - 1], SIGKILL);
+		removechild(children[num_children - 1]);
 		children[num_children--] = 0;
 	}
 
@@ -91,102 +91,98 @@ int main(int argc, char** argv) {
 		// Make sure we got a num processes specified
 		if (optind >= argc) {
 			errno = EINVAL;
-			fprintf(stderr, "%s: ", exe_name);
-			perror("Did not get number of processes as arg");
-			exit(EXIT_FAILURE);
+			outputerror(exe_name, "Did not get number of processes as arg", EXIT_FAILURE);
 		}
 		
 		num_apps = atoi(argv[optind++]);
 		if (num_apps > MAX_PROCESSES) {
-			errno= EINVAL;
-			fprintf(stderr, "%s: ", exe_name);
-			perror("Too many processes requested. Falling back to max.");
+			errno = EINVAL;
+			outputerror(exe_name, "Too many processes requested. Falling back to max", -1);
 			num_apps = MAX_PROCESSES;
 		}
 		
 		// error if got more than one option
 		if (optind < argc) {
 			errno = EINVAL;
-			fprintf(stderr, "%s: ", exe_name);
-			perror("Unkown option");
-			exit(EXIT_FAILURE);
+			outputerror(exe_name, "Unkown option", EXIT_FAILURE);
 		}
 		
 		// error if got invalid num_apps
 		if (num_apps == 0) {
 			errno = EINVAL;
-			fprintf(stderr, "%s: ", exe_name);
-			perror("Passed invalid integer for number of processes");
-			exit(EXIT_FAILURE);
+			outputerror(exe_name, "Passed invalid integer for number of processes", EXIT_FAILURE);
 		}
 	} while (optind < argc);
 	
-	//TODO: initlicense
-	initlicense();
+	//Intialize license object
+	if (initlicense() == -1) {
+		errno = EINVAL;
+		outputerror(exe_name, "Failed to initialize shared memory block", EXIT_FAILURE);
+	}
+	fprintf(stderr, "apps: %d\n", num_apps);
+	addtolicense(num_apps);
 
 
 	// Setup signal handlers
 	signal(SIGINT, signal_handler);
 	signal(SIGALRM, signal_handler);
 
+	// Terminate if children do not finish in timeout time	
+	alarm(MAX_TIMEOUT);
+
 	char input_buffer[MAX_CANON]; // Setup a buffer to read in text
 	
 	// MAIN LOOP //
 	// Read in max characters per line into buffer then execute their command
 	while (fgets(input_buffer, MAX_CANON, stdin) != NULL) {
-		// process id holder
-		pid_t pid;
+		// Pid holder variable
+		pid_t pid; 
 
-		// If running max processes wait until one finishes
-		if (num_children >= num_apps) {
-			// Wait for a child to finish then start another for a new command
-			pid = wait(NULL);
-			removechild(pid);
-		}
-		
 		// GET INPUT FOR COMMAND //
 		// Get new size (in characters) of the string
 		size_t input_size = strlen(input_buffer) + 1;
 		// Allocate memory for this string
 		char* input_text = malloc(input_size * sizeof(char));
 		if (input_text == NULL) {
-			fprintf(stderr, "%s: ", exe_name);
-			perror("Failed to allocate memory for input");
-			exit(EXIT_FAILURE);
+			outputerror(exe_name, "Failed to allocate memory for input", EXIT_FAILURE);
 		}
 		
 		// Copy buffer characters to string	
 		strncpy(input_text, input_buffer, input_size);
-	
+
+		// REQUEST LICENSE //
+		getlicense();
+
 		// RUN COMMAND //
 		// Fork children and have children run docommand
-		if (num_children < num_apps) {
-			pid = fork();
-			if (pid == 0) {
-				// We are a child, execute command
-				if (docommand(input_text) == -1) {
-					fprintf(stderr, "%s: ", exe_name);
-					perror("Failed to execute child process");
-					exit(EXIT_FAILURE);
-				}
-			}
-			else {
-				// We are parent, append this pid to children
-				children[num_children++] = pid;
-				free(input_text);
+		pid = fork();
+		if (pid == 0) {
+			// We are a child, execute command
+			if (docommand(input_text) == -1) {
+				outputerror(exe_name, "Failed to execute child process", EXIT_FAILURE);
 			}
 		}
-	}
+		else {
+			// We are parent, append this pid to children
+			children[num_children++] = pid;
+			free(input_text);
+		}
 
-	// Terminate if children do not finish in timeout time	
-	alarm(MAX_TIMEOUT);
+		// See if any children have returned, if so return a license and remove child
+		pid = waitpid(-1, NULL, WNOHANG);
+		if (pid > 0) {
+			returnlicense();
+			removechild(pid);
+		} 
+	}
 
 	// Wait until all children finish
 	while (num_children > 0) {
 		pid_t pid = wait(NULL);
+		returnlicense();
 		removechild(pid);
 	}
 	
-	// TODO: Remove shared memory
-
+	// Remove shared memory
+	destlicense();
 }
