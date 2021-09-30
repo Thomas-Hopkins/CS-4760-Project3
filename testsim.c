@@ -9,13 +9,18 @@
 
 void help () {
 	printf("testsim help\n");
+	printf("\n");
+	printf("t\tTime in seconds to sleep between logging calls. (Required)\n");
+	printf("n\tNumber of times to output a log message.\n");
+	printf("[-h]\tShow this help dialogue.\n");
+	printf("\n");
 }
 
 int main(int argc, char** argv) {
 	int option;
 	char* exe_name = argv[0];
 
-	while ((option = getopt(argc, argv, "h" )) != -1) {
+	while ((option = getopt(argc, argv, "hp:" )) != -1) {
 		switch(option) {
 			case 'h':
 				help();

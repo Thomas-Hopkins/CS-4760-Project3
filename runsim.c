@@ -66,7 +66,7 @@ void signal_handler(int signum) {
 int docommand(char* command) {
 	char* program = strtok(command, " ");
 	char* cmd1 = strtok(NULL, " ");
-	char* cmd2 = strtok(NULL, " ");
+	char* cmd2 = strtok(NULL, " \n");
 	return execl(program, program, cmd1, cmd2, NULL);
 }
 
@@ -180,8 +180,15 @@ int main(int argc, char** argv) {
 	// Wait until all children finish
 	while (num_children > 0) {
 		pid_t pid = wait(NULL);
-		returnlicense();
-		removechild(pid);
+
+		// It might be the case that a child has finished by the time this loop is hit
+		if (pid >= 0) {
+			returnlicense();
+			removechild(pid);
+		}
+		else {
+			num_children--;
+		}
 	}
 	
 	// Remove shared memory

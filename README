@@ -44,8 +44,9 @@ The testsim excutable is run by runsim. It takes 2 required arguments:
 The runsim executable will spawn multiple children of testsim each one
     using a license. If the licenses run out we will wait until a child
     exits and returns the license. 
+Access of the critical resource (logging messages) is blocked while a
+    process is currently accessing it through use of the bakery
+    algorithm.
 
 
 |- KNOWN ISSUES/LIMITATIONS -|
-The program is missing implementation of the Bakery Algorithm to sync
-    processes.
