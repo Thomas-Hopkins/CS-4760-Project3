@@ -10,8 +10,8 @@
 void help () {
 	printf("testsim help\n");
 	printf("\n");
-	printf("t\tTime in seconds to sleep between logging calls. (Required)\n");
-	printf("n\tNumber of times to output a log message.\n");
+	printf("-t\tTime in seconds to sleep between logging calls. (Required)\n");
+	printf("n\tNumber of times to output a log message. (required)\n");
 	printf("[-h]\tShow this help dialogue.\n");
 	printf("\n");
 }
@@ -19,26 +19,38 @@ void help () {
 int main(int argc, char** argv) {
 	int option;
 	char* exe_name = argv[0];
+	int sleep_t = -1;
 
-	while ((option = getopt(argc, argv, "hp:" )) != -1) {
+	while ((option = getopt(argc, argv, "ht:" )) != -1) {
 		switch(option) {
 			case 'h':
 				help();
 				return EXIT_SUCCESS;
+			case 't':
+				sleep_t = atoi(optarg);
+				if (sleep_t == 0) {
+					errno = EINVAL;
+					outputerror(exe_name, "Invalid arguments. See -h for help", EXIT_FAILURE);
+				}
+				break;
 			case '?':
 				// getopt handles error 
 				return EXIT_FAILURE;
 		}
 	}
+	// Make sure user inputted sleep time
+	if (sleep_t < 0) {
+		errno = EINVAL;
+		outputerror(exe_name, "Sleep time not specified. See -h for help", EXIT_FAILURE);
+	}
 	
 	// Handle non-flag args
-	if (argc - optind < 2) {
+	if (argc - optind < 1) {
 		errno = EINVAL;
 		outputerror(exe_name, "Not enough arguments. See -h for help", EXIT_FAILURE);
 	} 
-	int sleep_t = atoi(argv[optind++]);
 	int repeat = atoi(argv[optind++]);
-	if (sleep_t == 0 || repeat == 0) {
+	if (repeat == 0) {
 		errno = EINVAL;
 		outputerror(exe_name, "Invalid arguments. See -h for help", EXIT_FAILURE);
 	}

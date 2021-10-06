@@ -120,7 +120,6 @@ int main(int argc, char** argv) {
 		errno = EINVAL;
 		outputerror(exe_name, "Failed to initialize shared memory block", EXIT_FAILURE);
 	}
-	fprintf(stderr, "apps: %d\n", num_apps);
 	addtolicense(num_apps);
 
 

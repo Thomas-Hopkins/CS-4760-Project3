@@ -15,9 +15,7 @@ void logmsg(const char* msg); // log message to logfile
 
 // Shared memory struct
 struct license_mem {
-    int nlicenses;
-    int choosing[MAX_PROCESSES];
-    int number[MAX_PROCESSES];
+    int nlicenses;;
 };
 
 // public member attributes

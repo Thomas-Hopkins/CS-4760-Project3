@@ -1,9 +1,7 @@
-testsim 1 5
-testsim 1 5
-testsim 1 5
-testsim 1 5
-testsim 1 5
-testsim 1 5
-testsim 1 5
-testsim 1 5
-testsim 1 5
+testsim -t 1 5
+testsim -t 1 5
+testsim -t 1 5
+testsim -t 1 5
+testsim -t 1 5
+testsim -t 1 5
+testsim -t 1 5
