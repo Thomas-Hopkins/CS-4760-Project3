@@ -66,8 +66,9 @@ void signal_handler(int signum) {
 int docommand(char* command) {
 	char* program = strtok(command, " ");
 	char* cmd1 = strtok(NULL, " ");
-	char* cmd2 = strtok(NULL, " \n");
-	return execl(program, program, cmd1, cmd2, NULL);
+	char* cmd2 = strtok(NULL, " ");
+	char* cmd3 = strtok(NULL, " \n");
+	return execl(program, program, cmd1, cmd2, cmd3, NULL);
 }
 
 int main(int argc, char** argv) {

@@ -13,8 +13,8 @@
 struct license_mem* shared_mem = NULL;
 static int sem_id = -1;
 
-void lock();
-void unlock();
+void lock(int num);
+void unlock(int num);
 
 // Private helper function to get shared memory id
 int getsharedmem() {
@@ -28,13 +28,25 @@ int getsharedmem() {
 	return shmget(key, sizeof(struct license_mem), 0644 | IPC_CREAT);
 }
 
-int initsemaphores() {
+int getsemaphores() {
 	key_t key;
-	int sem_id = 0;
+	// Get numeric key of shared memory file
+	key = ftok(SHM_FILE, 1);
+	if (key == -1) return -1;
 
-	//TODO: Implement semaphore initialization
+	// Get access to semaphore set (2 semaphores)
+	if ((sem_id = semget(key, 2, 0644 | IPC_CREAT)) == -1) perror("Failed to access sempahore");
 
-	return sem_id;
+	return 0;
+}
+
+int initsemaphores() {
+	union semun arg;
+	arg.val = 1;
+	// Set the values for the two semaphores
+	if ((semctl(sem_id, 0, SETVAL, arg)) == -1) return -1;
+	if ((semctl(sem_id, 1, SETVAL, arg)) == -1) return -1;
+	return 0;
 }
 
 // Public function to attach to shared memory
@@ -48,15 +60,12 @@ int attachsharedmem() {
 	shared_mem = shmat(mem_id, NULL, 0);
 	if (shared_mem == (void*)-1 ) return -1;
 
-	sem_id = initsemaphores();
-	if (sem_id < 0) return -1;
-
 	return 0;
 }
 
 // Tries to get a license if available, blocks if unavailable. Returns -1 if failed to get shared memory.
 int getlicense() {
-	lock();
+	lock(0);
 	// Initialize shared memory if not available 
 	if (shared_mem == NULL) {
 		if (attachsharedmem() == -1) return -1;
@@ -70,17 +79,17 @@ int getlicense() {
 	// Take license
 	shared_mem->nlicenses--;
 
-	unlock();
+	unlock(0);
 	return 0;
 }
 
 // Public function to be called after a process has finished executing
 int returnlicense() {
 	int ret;
-	lock();
+	lock(0);
 	fprintf(stderr, "%d: Returning a license.\n", getpid());
 	ret = shared_mem->nlicenses++;
-	unlock();
+	unlock(0);
 	return ret;
 }
 
@@ -88,6 +97,9 @@ int returnlicense() {
 int initlicense() {
 	if (shared_mem == NULL) {
 		if (attachsharedmem() == -1) return -1;
+	}
+	if (sem_id < 0) {
+		if (getsemaphores() == -1) return -1;
 	}
 	shared_mem->nlicenses = 0;
 
@@ -97,16 +109,16 @@ int initlicense() {
 // Public function to increase number of available licenses
 int addtolicense(int n) {
 	int ret;
-	lock();
+	lock(0);
 	shared_mem->nlicenses += n;
 	ret = shared_mem->nlicenses;
-	unlock();
+	unlock(0);
 	return ret;
 }
 
 // Public function to decrease number of available licenses
 int removelicenses(int n) {
-	lock();
+	lock(0);
 	while (n > 0) {
 		// Return error if no more licenses to remove
 		if (shared_mem->nlicenses == 0) return -1;
@@ -116,7 +128,7 @@ int removelicenses(int n) {
 		returnlicense();
 		shared_mem->nlicenses--;
 	}
-	unlock();
+	unlock(0);
 	return 0;
 }
 
@@ -125,30 +137,38 @@ int destlicense() {
 	int mem_id = getsharedmem();
 
 	if (mem_id == -1) return -1;
-
+	// Remove semaphore
+	if ((semctl(sem_id, 0, IPC_RMID)) == -1) return -1;
+	// Remove shared memory
 	return shmctl(mem_id, IPC_RMID, NULL);
 }
 
 // private function to block use of critical resource until it has been unlocked
-void lock() {
-	//TODO: semaphore lock with semop()
-	return;
+void lock(int num) {
+	struct sembuf myop[1];
+	myop->sem_num = (short)num;
+	myop->sem_op = (short)-1;
+	myop->sem_flg = (short)0;
+	if ((semop(sem_id, myop, 1)) == -1) perror("Could not lock!");
 }
 
 // Private function to unlock critical resource
-void unlock() {
-	//TODO: semaphore unlock with semop()
-	return;
+void unlock(int num) {
+	struct sembuf myop[1];
+	myop->sem_num = (short)num;
+	myop->sem_op = (short)1;
+	myop->sem_flg = (short)0;
+	if ((semop(sem_id, myop, 1)) == -1) perror("Could not unlock!");
 } 
 
 // Public function to log a message (critical resource)
 void logmsg(const char* msg) {
-	lock(getpid() % MAX_PROCESSES);
+	lock(1);
 
 	addmsg(non_type, msg);
 	savelog(LOG_FILE);
 	clearlog();
 
-	unlock(getpid() % MAX_PROCESSES);
+	unlock(1);
 }
 
