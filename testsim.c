@@ -60,6 +60,7 @@ int main(int argc, char** argv) {
 	}
 	
 	attachsharedmem();
+	getsemaphores();
 
 	// Main loop
 	for (int i = 1; i <= repeat; i++) {

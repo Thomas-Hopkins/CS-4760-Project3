@@ -100,6 +100,7 @@ int initlicense() {
 	}
 	if (sem_id < 0) {
 		if (getsemaphores() == -1) return -1;
+		if (initsemaphores() == -1) return -1;
 	}
 	shared_mem->nlicenses = 0;
 

@@ -5,6 +5,7 @@
 #include "config.h"
 
 // Public member functions
+int getsemaphores(); // Access semaphores 
 int attachsharedmem(); // Attach to shared memory
 int getlicense(); // Block until license is available
 int returnlicense(); // increment available licenses
