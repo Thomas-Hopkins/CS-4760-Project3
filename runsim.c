@@ -13,6 +13,7 @@
 
 static int num_children;
 static pid_t children[MAX_PROCESSES]; 
+static char* exe_name;
 
 void help() {
 	printf("Runsim help.\n");
@@ -35,10 +36,6 @@ int removechild(pid_t pid) {
 	return -1;
 }
 
-void cleanup() {
-	return;
-}
-
 void signal_handler(int signum) {
 	// Issue messages	
 	if (signum == SIGINT) {
@@ -56,7 +53,7 @@ void signal_handler(int signum) {
 	}
 
 	// Cleanup license object (remove shared memory)
-	destlicense();
+	if (destlicense() == -1) outputerror(exe_name, "Failed to destruct license", EXIT_FAILURE);
 
 	if (signum == SIGINT) exit(EXIT_SUCCESS);
 	if (signum == SIGALRM) exit(EXIT_FAILURE);
@@ -74,7 +71,7 @@ int docommand(char* command) {
 int main(int argc, char** argv) {
 	int option;
 	int num_apps;
-	char* exe_name = argv[0];
+	exe_name = argv[0];
 	
 	// Process args
 	while ((option = getopt(argc, argv, "h")) != -1) {
@@ -118,8 +115,7 @@ int main(int argc, char** argv) {
 	
 	//Intialize license object
 	if (initlicense() == -1) {
-		errno = EINVAL;
-		outputerror(exe_name, "Failed to initialize shared memory block", EXIT_FAILURE);
+		outputerror(exe_name, "Failed to initialize license", EXIT_FAILURE);
 	}
 	addtolicense(num_apps);
 
@@ -192,5 +188,5 @@ int main(int argc, char** argv) {
 	}
 	
 	// Remove shared memory
-	destlicense();
+	if (destlicense() == -1) outputerror(exe_name, "Failed to destruct license", EXIT_FAILURE);
 }

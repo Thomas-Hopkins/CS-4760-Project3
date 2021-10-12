@@ -59,8 +59,8 @@ int main(int argc, char** argv) {
 		outputerror(exe_name, "Too many arguments. See -h for help", EXIT_FAILURE);
 	}
 	
-	attachsharedmem();
-	getsemaphores();
+	if (attachsharedmem() == -1) outputerror(exe_name, "Failed to attach to shared memory", EXIT_FAILURE);
+	if (getsemaphores() == -1) outputerror(exe_name, "Failed to get semaphores", EXIT_FAILURE);
 
 	// Main loop
 	for (int i = 1; i <= repeat; i++) {

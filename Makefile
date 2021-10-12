@@ -10,7 +10,7 @@ EXE = runsim testsim
 DEPS = license.h config.h utils.h
 OBJS = license.o utils.o
 
-CLEAN = $(EXE) *.o $(OBJS) $(LIB)/$(LIBLOG).a $(LIB)/*.h
+CLEAN = $(EXE) *.o $(OBJS) $(LIB)/$(LIBLOG).a $(LIB)/*.h logfile
 
 all: $(LIB)/$(LIBLOG).a $(EXE)
 

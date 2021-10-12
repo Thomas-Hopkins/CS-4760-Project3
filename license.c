@@ -28,6 +28,7 @@ int getsharedmem() {
 	return shmget(key, sizeof(struct license_mem), 0644 | IPC_CREAT);
 }
 
+// Get the semaphore id for use with this license manager
 int getsemaphores() {
 	key_t key;
 	// Get numeric key of shared memory file
@@ -35,11 +36,12 @@ int getsemaphores() {
 	if (key == -1) return -1;
 
 	// Get access to semaphore set (2 semaphores)
-	if ((sem_id = semget(key, 2, 0644 | IPC_CREAT)) == -1) perror("Failed to access sempahore");
+	if ((sem_id = semget(key, 2, 0644 | IPC_CREAT)) == -1) return -1;
 
 	return 0;
 }
 
+// Initialize the semaphores to their initial value of 1
 int initsemaphores() {
 	union semun arg;
 	arg.val = 1;
@@ -93,11 +95,15 @@ int returnlicense() {
 	return ret;
 }
 
-// Public function to initialize number of licenses returns -1 if unsucessful
+// Intended to be called only once. Child processes should call attachsharedmem()
+// and getsemaphores() separately so as not to override the intial values of these
+// shared constructs.
 int initlicense() {
+	// If shared memory is not initialized do so
 	if (shared_mem == NULL) {
 		if (attachsharedmem() == -1) return -1;
 	}
+	// If semaphores are not initalized do so.
 	if (sem_id < 0) {
 		if (getsemaphores() == -1) return -1;
 		if (initsemaphores() == -1) return -1;
@@ -151,6 +157,7 @@ void lock(int num) {
 	myop->sem_op = (short)-1;
 	myop->sem_flg = (short)0;
 	if ((semop(sem_id, myop, 1)) == -1) perror("Could not lock!");
+	fprintf(stderr, "%d: Got lock on critical resource %d\n", getpid(), num);
 }
 
 // Private function to unlock critical resource
@@ -160,6 +167,7 @@ void unlock(int num) {
 	myop->sem_op = (short)1;
 	myop->sem_flg = (short)0;
 	if ((semop(sem_id, myop, 1)) == -1) perror("Could not unlock!");
+	fprintf(stderr, "%d: Released lock on critical resource %d\n", getpid(), num);
 } 
 
 // Public function to log a message (critical resource)
